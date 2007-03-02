@@ -46,56 +46,13 @@ class PluginTester(object):
     _args = None
     nose = None
     
-    class NoseStream(object):
-        """An interface into the nosetests process.
-        
-        This provides a way to "scrape" the textual output produced by your 
-        plugin to make sure that it is behaving correctly at the highest level 
-        possible.  This may be helpful for proving exact behavior and testing 
-        your plugin with other plugins.
-        
-        """
-        def __init__(self, proc):
-            self.proc = proc
-        
-        def inspect(self, expect_error=False, foreach_line=None):
-            """inspect the result of your test run.
-            
-            Keyword Arguments
-            -----------------
-            - foreach_line
-            
-              - if not None, called with each line of output as the argument.  
-                Designed to be used for pattern matching.
-              
-            - expect_error
-              
-              - if True, an AssertionError will be raised if the test passes.  
-                Otherwise, an AssertionError is raised if the test fails 
-                (default behavior).
-            
-            """
-            # output is for debugging only, padded with a little visual offset 
-            # for clarity
-            sys.stdout.write("\n\\\n")
-            for line in self.proc.stdout:
-                if foreach_line:
-                    foreach_line(line)
-                sys.stdout.write( "".join(("    ", line)) )
-            sys.stdout.write("/\n")
-            returncode = self.proc.wait()
-            if expect_error:
-                assert returncode != 0
-            else:
-                eq_(returncode, 0)
-    
     def makeSuite(self):
         """must return the full path to a directory to test."""
         raise NotImplementedError
     
     def _makeNose(self):
         """returns a NoseStream object."""         
-        return self.NoseStream( subprocess.Popen(self._args, 
+        return NoseStream( subprocess.Popen(self._args, 
                                     stdout=subprocess.PIPE, 
                                     stderr=subprocess.STDOUT, 
                                     cwd=self.suitepath, env=self.env, bufsize=1,
@@ -114,6 +71,89 @@ class PluginTester(object):
         if not self.suitepath:
             self.suitepath = self.makeSuite()
         self.nose = self._makeNose()
+    
+class NoseStream(object):
+    """An interface into the nosetests process.
+    
+    This provides a way to "scrape" the textual output produced by your plugin 
+    to make sure that it's behaving correctly at the highest level possible.  
+    This may be helpful for proving exact behavior, running simple "smoke 
+    tests", and testing your plugin with other plugins.
+    
+    expects to receive an instance of subprocess.Popen
+    
+    Keyword Arguments
+    -----------------
+    - debug
+      
+      - if True (default) output of the test run will go to stdout
+    
+    Example of usage
+    ----------------
+    
+    Create a test suite::
+    
+        >>> tmp = TempIO()
+        >>> tmp.test = "test"
+        >>> tmp.test.putfile("__init__.py", "") #doctest: +ELLIPSIS
+        '/.../__init__.py'
+        >>> tmp.test.putfile("test_bad.py", 
+        ...         "def test_bad(): raise ValueError") #doctest: +ELLIPSIS
+        '/.../test_bad.py'
+        >>> nose = NoseStream(subprocess.Popen(['nosetests'],
+        ...                     stdout=subprocess.PIPE,
+        ...                     stderr=subprocess.STDOUT,
+        ...                     cwd=tmp))
+        ... 
+        >>> nose.debug = False
+        >>> assert "ValueError" in nose
+        >>> for line in nose:
+        ...     if line.startswith("ERROR"):
+        ...         print line
+        ...
+        ERROR: test.test_bad.test_bad
+    
+    
+    """
+    def __init__(self, proc, debug=True):
+        self.proc = proc
+        self.debug = debug
+        self.returncode = None
+        self.buffer = []
+    
+    def __contains__(self, value):
+        for line in self:
+            if value in line:
+                return True
+        return False
+    
+    ##
+    # pad output with a little visual offset for clarity:
+    def _startDebugOut(self):
+        if self.debug: sys.stdout.write("\n\\\n")
+    def _debugLineOut(self, line):
+        if self.debug: sys.stdout.write( "".join(("    ", line, "\n")) )
+    def _endDebugOut(self):
+        if self.debug: sys.stdout.write("/\n")
+        
+    def __iter__(self):
+        """yields each line.rstrip() of output
+        
+        output is stdout + stderr unless Popen was configured otherwise
+        """
+        self._startDebugOut()
+        if self.buffer:
+            for line in self.buffer:
+                self._debugLineOut(line)
+                yield line
+        else:
+            for line in self.proc.stdout:
+                clean_line = line.rstrip()
+                self.buffer.append(clean_line)
+                self._debugLineOut(clean_line)
+                yield clean_line
+            self.returncode = self.proc.wait()
+        self._endDebugOut()
 
 class NoseTrimTest(PluginTester):
     activate_opt = '--with-trim'
@@ -161,14 +201,15 @@ def test_good_two():
     def test_suite(self):
         exc_re = re.compile("^(AssertionError|ValueError)")
         saw = {}
-        def watch_line(line):
+        
+        for line in self.nose:
             m = exc_re.search(line)
             if m:
                 k = m.group(1)
                 saw.setdefault(k, 0)
                 saw[k] += 1
-            
-        self.nose.inspect(expect_error=True, foreach_line=watch_line)
+        
+        assert self.nose.returncode != 0
         
         eq_(saw['AssertionError'], 1)
         eq_(saw['ValueError'], 1)
