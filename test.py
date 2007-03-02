@@ -195,11 +195,10 @@ def test_good_one():
 def test_good_two():
     pass
 """)
-        os.chdir(tmp)
         return tmp
         
     def test_suite(self):
-        exc_re = re.compile("^(AssertionError|ValueError)")
+        exc_re = re.compile("^(AssertionError|ValueError|AttributeError)")
         saw = {}
         
         for line in self.nose:
@@ -214,8 +213,21 @@ def test_good_two():
         eq_(saw['AssertionError'], 1)
         eq_(saw['ValueError'], 1)
 
-class TestNoseTrim(WithSimpleSuite, NoseTrimTest, TestCase):
+class TestTrim(WithSimpleSuite, NoseTrimTest, TestCase):
     pass
 
-class TestNoseTrimVerbose(WithSimpleSuite, NoseTrimTest, TestCase):
+class TestTrimVerbose(WithSimpleSuite, NoseTrimTest, TestCase):
     addargs = ['--verbose']
+    
+class TestTrimNonDupes(NoseTrimTest, TestCase):
+    def makeSuite(self):
+        tmp = TempIO()
+        tmp.putfile('test_lone_error.py', """
+def test_lone_error():
+    raise AssertionError
+""")
+        return tmp
+    
+    def test_non_dupes(self):
+        assert "+ 0 more" not in self.nose
+        

@@ -145,7 +145,7 @@ class TrimmedTextResult(TextTestResult):
             self.stream.writeln(self.separator2)
             self.stream.writeln("%s" % err)
             count = get_error_count(i)
-            if count:
+            if count > 1:
                 self.stream.writeln(self.separator2)
                 self.stream.writeln("+ %s more" % (count-1))
                 self.stream.writeln(self.separator2)
