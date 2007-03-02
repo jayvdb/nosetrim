@@ -3,7 +3,7 @@
 
 This is a plugin for [http://somethingaboutorange.com/mrl/projects/nose/ nosetests], a discovery based test runner for [http://python.org/ python].
 
-If you're hacking deep inside your codebase and you break a core component you're probably going to see your test suite blow up a zillion times with the same error.  Instead, you can run your tests with --trim-errors to see only the unique exception types.  The output you get will look like...
+If you're hacking deep inside your codebase and you break a core component, your test suite will probably blow up a zillion times with the same error.  Instead, you can run `nosetests --trim-errors` to see only the unique exceptions.  For example...
 
 {{{
 ======================================================================
