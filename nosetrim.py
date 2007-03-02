@@ -1,4 +1,34 @@
 
+"""A nose plugin that reports only unique exceptions
+
+This is a plugin for [http://somethingaboutorange.com/mrl/projects/nose/ nosetests], a discovery based test runner for [http://python.org/ python].
+
+If you're hacking deep inside your codebase and you break a core component you're probably going to see your test suite blow up a zillion times with the same error.  Instead, you can run your tests with --trim-errors to see only the unique exception types.  The output you get will look like...
+
+{{{
+======================================================================
+ERROR: test.deep_inside.mymodule.test
+----------------------------------------------------------------------
+Traceback (most recent call last):
+...
+AttributeError
+
+----------------------------------------------------------------------
++ 58 more
+----------------------------------------------------------------------
+}}}
+
+==Install==
+`easy_install nosetrim`
+
+or ... check out the source, cd into the root and type:
+
+`python setup.py develop`
+
+to create a link to the latest version.
+
+"""
+
 import os, logging, sys
 from nose.plugins import Plugin
 from unittest import _WritelnDecorator, TestResult
