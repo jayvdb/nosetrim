@@ -1,5 +1,5 @@
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='nosetrim',
@@ -12,7 +12,7 @@ setup(
         "A nose plugin that reports only unique exceptions"),
     install_requires='nose',
     license = 'GNU LGPL',
-    py_modules = ['nosetrim'],
+    packages = find_packages(),
     keywords = 'test unittest nose nosetests',
     entry_points = {
         'nose.plugins': [
