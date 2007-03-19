@@ -147,7 +147,10 @@ class NoseStream(object):
                 self._debugLineOut(line)
                 yield line
         else:
-            for line in self.proc.stdout:
+            while 1:
+                line = self.proc.stdout.readline()
+                if not line:
+                    break
                 clean_line = line.rstrip()
                 self.buffer.append(clean_line)
                 self._debugLineOut(clean_line)
