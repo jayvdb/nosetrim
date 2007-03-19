@@ -45,6 +45,7 @@ class PluginTester(object):
     env = {}
     _args = None
     nose = None
+    test_program = ['nosetests']
     
     def makeSuite(self):
         """must return the full path to a directory to test."""
@@ -63,7 +64,7 @@ class PluginTester(object):
         """  
         if not self.env:  
             self.env = dict([(k,v) for k,v in os.environ.items()])
-        self._args = ['nosetests', self.activate_opt]
+        self._args = self.test_program + [self.activate_opt]
         if self.addargs:
             self._args.extend(self.addargs)
         if self.debuglog:
