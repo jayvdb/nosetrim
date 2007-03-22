@@ -202,20 +202,10 @@ def test_good_two():
         return tmp
         
     def test_suite(self):
-        exc_re = re.compile("^(AssertionError|ValueError|AttributeError)")
-        saw = {}
-        
-        for line in self.nose:
-            m = exc_re.search(line)
-            if m:
-                k = m.group(1)
-                saw.setdefault(k, 0)
-                saw[k] += 1
+        assert 'AssertionError' in self.nose
+        assert 'ValueError' in self.nose
         
         assert self.nose.returncode != 0
-        
-        eq_(saw['AssertionError'], 1)
-        eq_(saw['ValueError'], 1)
 
 class TestTrim(WithSimpleSuite, NoseTrimTest, TestCase):
     pass
