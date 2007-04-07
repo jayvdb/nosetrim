@@ -116,6 +116,9 @@ class NoseStream(object):
     
     
     """
+    def reset_buffer(self):
+        self.buffer[:] = []
+        
     def __init__(self, proc, debug=True):
         self.proc = proc
         self.debug = debug
