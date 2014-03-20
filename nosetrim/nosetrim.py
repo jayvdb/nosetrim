@@ -30,6 +30,7 @@ to create a link to the latest version.
 """
 
 import os, logging, sys
+import inspect
 from nose.plugins import Plugin
 from unittest.runner import _WritelnDecorator
 from unittest import TestResult
@@ -82,7 +83,6 @@ class NoseTrim(Plugin):
         nose.core.TextTestResult = self._SalvagedTextTestResult
 
 
-
 class TrimmedTextResult(TextTestResult):
     """A patched up version of nose.result.TextTestResult.
 
@@ -90,13 +90,33 @@ class TrimmedTextResult(TextTestResult):
     same thing without the monkey business.
     """
     def __init__(self, *args,**kw):
-        super(TrimmedTextResult, self).__init__(*args,**kw)
+        super(TrimmedTextResult, self).__init__(*args, **kw)
         self._error_lookup = {}
         self._failure_lookup = {}
 
+    def _error_identifier(self, err):
+        etype, value, tb = err
+
+        # Find the bottom of the traceback
+        last_application_tb = tb
+        while tb is not None:
+            if not self._is_relevant_tb_level(tb):
+                last_application_tb = tb
+
+            # This is from unittest, and is poorly named.
+            # It returns True for tb levels that are inside the unittest library
+            tb = tb.tb_next
+
+        # Uniquify errors based on the bottom level of the stack frame
+        if last_application_tb is None:
+            eid = etype.__name__
+        else:
+            frame_info = inspect.getframeinfo(last_application_tb)
+            eid = etype.__name__, frame_info.filename, frame_info.lineno
+        return eid
+
     def _isNewErr(self, err):
-        etype, val, tb = err
-        ename = etype.__name__
+        ename = self._error_identifier(err)
         if ename in _errormap:
             _errormap[ename] += 1
             return False
@@ -106,14 +126,14 @@ class TrimmedTextResult(TextTestResult):
     def addError(self, test, err):
         if self._isNewErr(err):
             super(TrimmedTextResult, self).addError(test, err)
-            self._error_lookup[len(self.errors) - 1] = err[0].__name__
+            self._error_lookup[len(self.errors) - 1] = self._error_identifier(err)
         else:
             super(TrimmedTextResult, self).addSkip(test, 'Error already seen')
 
     def addFailure(self, test, err):
         if self._isNewErr(err):
             super(TrimmedTextResult, self).addFailure(test, err)
-            self._failure_lookup[len(self.failures) - 1] = err[0].__name__
+            self._failure_lookup[len(self.failures) - 1] = self._error_identifier(err)
         else:
             super(TrimmedTextResult, self).addSkip(test, 'Error already seen')
 
@@ -131,18 +151,21 @@ class TrimmedTextResult(TextTestResult):
                 ename = lookup[index]
                 return _errormap[ename]
 
-        self.printErrorList('ERROR', self.errors,
-                    lambda i: get_error_count(self._error_lookup, i))
         self.printErrorList('FAIL', self.failures,
                     lambda i: get_error_count(self._failure_lookup, i))
+        self.printErrorList('ERROR', self.errors,
+                    lambda i: get_error_count(self._error_lookup, i))
 
     def printErrorList(self, flavor, errors, get_error_count):
+        messages = []
         for idx, (test, err) in enumerate(errors):
+            messages.append((get_error_count(idx), self.getDescription(test), err))
+
+        for count, description, err in sorted(messages):
             self.stream.writeln(self.separator1)
-            self.stream.writeln("%s: %s" % (flavor, self.getDescription(test)))
+            self.stream.writeln("%s: %s" % (flavor, description))
             self.stream.writeln(self.separator2)
             self.stream.writeln("%s" % err)
-            count = get_error_count(idx)
             if count > 1:
                 self.stream.writeln(self.separator2)
                 self.stream.writeln("+ %s more" % (count - 1))
