@@ -24,7 +24,7 @@ setup(
             'trim = nosetrim:NoseTrim'
             ]
         },
-    tests_require=['fixture'],
+    tests_require=['tempdir'],
     classifiers=[
         'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
         'Development Status :: 4 - Beta',

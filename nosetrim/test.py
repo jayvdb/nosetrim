@@ -4,7 +4,7 @@ from nose.tools import eq_
 import sys, os, nose, subprocess
 from unittest import TestCase
 import pkg_resources
-from fixture import TempIO
+from tempdir import TempDir
 
 class PluginTester(object):
     """A mixin for testing nose plugins in their runtime environment.
@@ -74,6 +74,10 @@ class PluginTester(object):
             self._args.append('--debug=%s' % self.debuglog)
         if not self.suitepath:
             self.suitepath = self.makeSuite()
+            if isinstance(self.suitepath, TempDir):
+                # keep a reference to self.suitepath so it is not destroyed
+                self.temp_dir = self.suitepath
+                self.suitepath = self.suitepath.name
         self.nose = self._makeNose()
     
 class NoseStream(object):
@@ -97,17 +101,15 @@ class NoseStream(object):
     
     Create a test suite::
     
-        >>> tmp = TempIO()
-        >>> tmp.test = "test"
-        >>> tmp.test.putfile("__init__.py", "") #doctest: +ELLIPSIS
-        '/.../__init__.py'
-        >>> tmp.test.putfile("test_bad.py", 
+        >>> d = TempDir()
+        >>> with open(os.path.join(d.name, "test_bad.py"), 'w') as f:
+        >>>     f.write(
         ...         "def test_bad(): raise ValueError") #doctest: +ELLIPSIS
         '/.../test_bad.py'
         >>> nose = NoseStream(subprocess.Popen(['nosetests'],
         ...                     stdout=subprocess.PIPE,
         ...                     stderr=subprocess.STDOUT,
-        ...                     cwd=tmp))
+        ...                     cwd=d.name))
         ... 
         >>> nose.debug = False
         >>> assert "ValueError" in nose
@@ -191,8 +193,9 @@ class NoseTrimTest(PluginTester):
 class WithSimpleSuite(object):
     """mixin that tests a simple suite."""
     def makeSuite(self):
-        tmp = TempIO()
-        tmp.putfile('test_many_errors.py', """
+        d = TempDir()
+        with open(os.path.join(d.name, 'test_many_errors.py'), 'w') as f:
+            f.write("""
 def test_assert_one():
     raise AssertionError("nope x is not y")
 def test_one():
@@ -210,7 +213,7 @@ def test_good_one():
 def test_good_two():
     pass
 """)
-        return tmp
+        return d
         
     def test_suite(self):
         assert 'AssertionError' in self.nose
@@ -226,12 +229,13 @@ class TestTrimVerbose(WithSimpleSuite, NoseTrimTest, TestCase):
     
 class TestTrimNonDupes(NoseTrimTest, TestCase):
     def makeSuite(self):
-        tmp = TempIO()
-        tmp.putfile('test_lone_error.py', """
+        d = TempDir()
+        with open(os.path.join(d.name, 'test_lone_error.py'), 'w') as f:
+            f.write("""
 def test_lone_error():
     raise AssertionError
 """)
-        return tmp
+        return d
     
     def test_non_dupes(self):
         assert "+ 0 more" not in self.nose
