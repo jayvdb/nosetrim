@@ -45,7 +45,10 @@ class PluginTester(object):
     env = {}
     _args = None
     nose = None
-    test_program = ['nosetests']
+    if sys.executable:
+        test_program = [sys.executable, '-m', 'nose']
+    else:
+        test_program = ['nosetests']
     
     def makeSuite(self):
         """must return the full path to a directory to test."""
@@ -122,8 +125,14 @@ class NoseStream(object):
     def __init__(self, proc, debug=True):
         self.proc = proc
         self.debug = debug
-        self.returncode = None
+        self._returncode = None
         self.buffer = []
+
+    @property
+    def returncode(self):
+        if self._returncode is None:
+            list(iter(self))
+        return self._returncode
     
     def __contains__(self, value):
         for line in self:
@@ -146,20 +155,19 @@ class NoseStream(object):
         output is stdout + stderr unless Popen was configured otherwise
         """
         self._startDebugOut()
-        if self.buffer:
-            for line in self.buffer:
-                self._debugLineOut(line)
-                yield line
-        else:
-            while 1:
-                line = self.proc.stdout.readline()
-                if not line:
-                    break
+
+        for line in self.buffer:
+            self._debugLineOut(line)
+            yield line
+
+        if self._returncode is None:
+            for line in self.proc.stdout:
                 clean_line = line.rstrip()
                 self.buffer.append(clean_line)
                 self._debugLineOut(clean_line)
                 yield clean_line
-            self.returncode = self.proc.wait()
+            self._returncode = self.proc.wait()
+
         self._endDebugOut()
 
 class NoseTrimTest(PluginTester):
@@ -227,4 +235,3 @@ def test_lone_error():
     
     def test_non_dupes(self):
         assert "+ 0 more" not in self.nose
-        

@@ -19,5 +19,14 @@ setup(
             'trim = nosetrim:NoseTrim'
             ]
         },
-    )
-
+    tests_require=['fixture'],
+    classifiers=[
+        'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
+        'Development Status :: 4 - Beta',
+        'Operating System :: OS Independent',
+        'Intended Audience :: Developers',
+        'Environment :: Console',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development :: Testing',
+    ],
+)
