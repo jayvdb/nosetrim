@@ -31,10 +31,16 @@ to create a link to the latest version.
 
 import os, logging, sys
 import inspect
-from nose.plugins import Plugin
-from unittest.runner import _WritelnDecorator
-from unittest import TestResult
+
+try:
+    from unittest2.runner import _WritelnDecorator
+    from unittest2 import TestResult
+except ImportError:
+    from unittest.runner import _WritelnDecorator
+    from unittest import TestResult
+
 from nose.result import TextTestResult, ln
+from nose.plugins import Plugin
 
 log = logging.getLogger('nose.plugins.trim')
 

@@ -1,6 +1,10 @@
 
 from setuptools import setup, find_packages
 
+extras_require = {
+    ':python_version=="2.6"': ['unittest2'],
+}
+
 setup(
     name='nosetrim',
     version='0.1',
@@ -11,6 +15,7 @@ setup(
     description = ( 
         "A nose plugin that reports only unique exceptions"),
     install_requires='nose',
+    extras_require=extras_require,
     license = 'GNU LGPL',
     packages = find_packages(),
     keywords = 'test unittest nose nosetests',

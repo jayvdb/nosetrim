@@ -45,7 +45,7 @@ class PluginTester(object):
     env = {}
     _args = None
     nose = None
-    if sys.executable:
+    if sys.executable and sys.version_info >= (2, 7):
         test_program = [sys.executable, '-m', 'nose']
     else:
         test_program = ['nosetests']
